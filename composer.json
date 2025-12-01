@@ -1,0 +1,8 @@
+{
+  "name": "api/php-server",
+  "description": "API PHP desplegada en Clever Cloud",
+  "type": "project",
+  "require": {
+    "php": ">=7.4"
+  }
+}
