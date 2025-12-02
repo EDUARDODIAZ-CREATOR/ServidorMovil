@@ -3,10 +3,10 @@ header('Content-Type: application/json; charset=utf-8');
 
 // Recibir parámetros
 $email = $_REQUEST['email'] ?? null;
-$contraseña = $_REQUEST['contraseña'] ?? null;
+$contrasena = $_REQUEST['contrasena'] ?? null;
 
 // Validación básica
-if (!$email || !$contraseña) {
+if (!$email || !$contrasena) {
     echo json_encode([
         "resultado" => "FALTAN_DATOS"
     ]);
@@ -27,7 +27,7 @@ try {
     $stmt = $conn->prepare("CALL sp_login(:email, :contrasena)");
 
     $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':contrasena', $contraseña);
+    $stmt->bindParam(':contrasena', $contrasena);
     $stmt->execute();
 
     // SP login regresa una fila
