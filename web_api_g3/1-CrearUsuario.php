@@ -1,20 +1,16 @@
 <?php
-header("Content-Type: application/json");
 
-// Obtener datos enviados por POST
-$nombre     = $_POST['nombre'] ?? '';
-$email      = $_POST['email'] ?? '';
-$contrasena = $_POST['contraseña'] ?? '';
+$nombreU     = $_REQUEST['nombreU'] ?? null;
+$email       = $_REQUEST['email'] ?? null;
+$contraseñaL = $_REQUEST['contraseñaL'] ?? null;
 
-if (empty($nombre) || empty($email) || empty($contrasena)) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "mensaje" => "Todos los campos son requeridos."]);
-    exit();
+// Validación básica
+if (!$nombreU || !$email || !$contraseñaL) {
+    echo json_encode(["resultado" => "FALTAN_DATOS"]);
+    exit;
 }
 
-// ----------------------------
-// CONEXIÓN A CLEVER CLOUD
-// ----------------------------
+// Datos de Clever Cloud
 $servername = "blsc1i1tuhdeg2ueca1k-mysql.services.clever-cloud.com";
 $username   = "uuelw8kcqhbqjfui";
 $password   = "UvDUL8x7TRNjFO8UyRi2";
@@ -22,46 +18,32 @@ $dbname     = "blsc1i1tuhdeg2ueca1k";
 
 try {
     $conn = new PDO(
-        "mysql:host=$servername;dbname=$dbname;charset=utf8mb4",
+        "mysql:host=$servername;dbname=$dbname;charset=utf8mb4;port=3306",
         $username,
         $password
     );
-
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Verificar si el correo ya existe
-    $check = $conn->prepare("SELECT COUNT(*) FROM usuarios WHERE email = :email");
-    $check->bindParam(':email', $email);
-    $check->execute();
-    $existe = $check->fetchColumn();
+    // Llamar SP
+    $stmt = $conn->prepare("CALL sp_crear_usuario(:nom, :mail, :pass)");
 
-    if ($existe > 0) {
-        echo json_encode(["status" => "error", "mensaje" => "El correo ya está registrado."]);
-        exit();
-    }
+    $stmt->bindParam(':nom',  $nombreU);
+    $stmt->bindParam(':mail', $email);
+    $stmt->bindParam(':pass', $contraseñaL);
 
-    // Insertar usuario (contraseña sin encriptar - modo inseguro)
-    $stmt = $conn->prepare(
-        "INSERT INTO usuarios (nombre, email, contraseña)
-         VALUES (:nombre, :email, :contrasena)"
-    );
+    $stmt->execute();
 
-    $stmt->bindParam(':nombre', $nombre);
-    $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':contrasena', $contrasena);
+    // Respuesta del SP
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($stmt->execute()) {
-        http_response_code(201);
-        echo json_encode(["status" => "ok", "mensaje" => "Usuario registrado correctamente."]);
-    } else {
-        http_response_code(500);
-        echo json_encode(["status" => "error", "mensaje" => "Error al registrar."]);
-    }
+    echo json_encode($result);
 
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["status" => "error", "mensaje" => "Error de BD: " . $e->getMessage()]);
-} finally {
-    $conn = null;
+} catch(PDOException $e) {
+    echo json_encode([
+        "error" => true,
+        "message" => $e->getMessage()
+    ]);
 }
+
+$conn = null;
 ?>
