@@ -1,63 +1,46 @@
-<?php
-header("Content-Type: application/json");
+<?php 
+header('Content-Type: application/json; charset=utf-8');
 
-$email      = $_POST['email'] ?? '';
-$contrasena = $_POST['contrasena'] ?? ''; 
+// Recibir parámetros
+$email = $_REQUEST['email'] ?? null;
+$contraseña = $_REQUEST['contraseña'] ?? null;
 
-if (empty($email) || empty($contrasena)) {
-    http_response_code(400);
-    echo json_encode(["status" => "error", "mensaje" => "Email y contraseña son requeridos."]);
-    exit();
+// Validación básica
+if (!$email || !$contraseña) {
+    echo json_encode([
+        "resultado" => "FALTAN_DATOS"
+    ]);
+    exit;
 }
 
-// ----------------------------
-// CONEXIÓN A CLEVER CLOUD
-// ----------------------------
+// DATOS DE CLEVER CLOUD (TU HOST NUEVO)
 $servername = "blsc1i1tuhdeg2ueca1k-mysql.services.clever-cloud.com";
 $username   = "uuelw8kcqhbqjfui";
 $password   = "UvDUL8x7TRNjFO8UyRi2";
 $dbname     = "blsc1i1tuhdeg2ueca1k";
 
 try {
-    $conn = new PDO(
-        "mysql:host=$servername;dbname=$dbname;charset=utf8mb4",
-        $username, 
-        $password
-    );
+    $conn = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8mb4;port=3306", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Buscar al usuario por email
-    $stmt = $conn->prepare(
-        "SELECT id, nombre, email, contraseña 
-         FROM usuarios 
-         WHERE email = :email"
-    );
+    // LLAMAR TU SP REAL: sp_login
+    $stmt = $conn->prepare("CALL sp_login(:email, :contrasena)");
+
     $stmt->bindParam(':email', $email);
+    $stmt->bindParam(':contrasena', $contraseña);
     $stmt->execute();
-    
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Comparación directa (modo inseguro)
-    if ($user && $contrasena === $user['contraseña']) {
-        http_response_code(200);
-        echo json_encode([
-            "status" => "ok",
-            "mensaje" => "Inicio de sesión correcto (modo inseguro).",
-            "usuario" => [
-                "id" => (int)$user['id'],
-                "nombre" => $user['nombre'],
-                "email" => $user['email']
-            ]
-        ]);
-    } else {
-        http_response_code(401);
-        echo json_encode(["status" => "error", "mensaje" => "Email o contraseña incorrectos."]);
-    }
+    // SP login regresa una fila
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["status" => "error", "mensaje" => "Error de BD: " . $e->getMessage()]);
-} finally {
-    $conn = null;
+    echo json_encode($result);
+
+} catch(PDOException $e) {
+    echo json_encode([
+        "resultado" => "ERROR",
+        "message" => $e->getMessage()
+    ]);
 }
+
+$conn = null;
 ?>
