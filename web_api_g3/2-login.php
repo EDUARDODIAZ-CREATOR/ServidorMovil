@@ -2,7 +2,7 @@
 header("Content-Type: application/json");
 
 $email      = $_POST['email'] ?? '';
-$contrasena = $_POST['contraseña'] ?? ''; 
+$contrasena = $_POST['contrasena'] ?? ''; 
 
 if (empty($email) || empty($contrasena)) {
     http_response_code(400);
